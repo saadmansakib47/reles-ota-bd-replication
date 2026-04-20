@@ -8,9 +8,9 @@ from pathlib import Path
 from ota_env import OTAEnv
 
 # ====================== CONFIG ======================
-N_BLOCKS = 24
-TOTAL_TIMESTEPS = 150_000          # Start small, increase later
-N_ENVS = 4                         # Vectorized environments for speed
+N_BLOCKS = 16 
+TOTAL_TIMESTEPS = 50_000          # Start small, increase later
+N_ENVS = 2                         # Vectorized environments for speed
 EVAL_FREQ = 10_000
 SAVE_FREQ = 25_000
 
@@ -85,5 +85,3 @@ if __name__ == "__main__":
     
     print("\n PPO Training Pipeline Ready.")
     print("Check TensorBoard with: tensorboard --logdir results/logs")
-
-
