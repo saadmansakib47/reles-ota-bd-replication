@@ -77,11 +77,10 @@ def train_ppo(version: str = "generic", bd_mode: bool = False):
 
 # ====================== QUICK TEST RUN ======================
 if __name__ == "__main__":
-    # First train a small generic version (fast check)
-    model_generic = train_ppo(version="generic", bd_mode=False)
+    # Generic already trained → now train BD with real parameters
+    print(" Training BD version with real Bangladesh parameters from PDF...")
+    model_bd = train_ppo(version="bd", bd_mode=True)
     
-    # Optional: BD version (uncomment after you have good bd_params.json)
-    # model_bd = train_ppo(version="bd", bd_mode=True)
-    
-    print("\n PPO Training Pipeline Ready.")
-    print("Check TensorBoard with: tensorboard --logdir results/logs")
+    print("\n BD training completed!")
+    print("Models saved in results/models/")
+    print("Next step: run experiment_runner.py")

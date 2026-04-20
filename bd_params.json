@@ -1,6 +1,9 @@
 {
-  "latency_base_ms": 150.0,
+  "latency_base_ms": 120.0,
   "packet_loss_rate": 0.05,
-  "memory_budget_fraction": 0.65,
-  "bandwidth_mbps": 25.0
+  "memory_budget_fraction": 0.60,
+  "bandwidth_mbps": 25.0,
+  "jitter_ms": 35.0,
+  "monsoon_multiplier": 1.3,
+  "notes": "Network-Parameters.pdf (Teammate 2, April 2026) — urban Dhaka 4G, OTA server 120 ms"
 }
