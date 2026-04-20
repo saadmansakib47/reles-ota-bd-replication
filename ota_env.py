@@ -78,14 +78,22 @@ class OTAEnv(gym.Env):
         }
 
     def _estimate_delta_size(self, block_idx: int, operation: int) -> float:
-        """Simple but realistic delta estimation (paper uses content similarity)"""
-        # Simulate difference percentage
-        similarity = random.uniform(0.6, 0.95) if operation == 0 else random.uniform(0.1, 0.7)
-        base_delta = self.block_size * (1 - similarity)
+        """Faster & deterministic delta estimation"""
+        # Pre-computed similarity bias per block (makes it faster and more stable)
+        if not hasattr(self, 'similarity_bias'):
+            self.similarity_bias = np.random.uniform(0.4, 0.9, self.n_blocks)
         
-        if operation == 2:  # MB needs extra backup space
-            base_delta *= 1.4
-        return max(64, base_delta)  # minimum 64 bytes
+        similarity = self.similarity_bias[block_idx]
+        if operation == 0:      # Copy
+            similarity = min(0.95, similarity + 0.2)
+        elif operation == 2:    # MB
+            similarity -= 0.15
+        
+        base_delta = self.block_size * (1.0 - similarity)
+        if operation == 2:
+            base_delta *= 1.45
+        
+        return max(64.0, base_delta)
 
     def _calculate_tx_cost(self, payload_bytes: float) -> float:
         """Transmission cost influenced by BD parameters"""
