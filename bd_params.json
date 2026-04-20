@@ -1,0 +1,6 @@
+{
+  "latency_base_ms": 150.0,
+  "packet_loss_rate": 0.05,
+  "memory_budget_fraction": 0.65,
+  "bandwidth_mbps": 25.0
+}
