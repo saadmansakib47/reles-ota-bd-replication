@@ -105,6 +105,10 @@ class OTAEnv(gym.Env):
         return tx_cost
 
     def step(self, action):
+        # Safety timeout (prevent infinite hang)
+        if self.current_step > self.n_blocks + 5:
+            return self._get_obs(), -100.0, True, False, {"early_termination": True}
+        
         block_idx, operation = action
 
         # === Invalid Action Handling ===
