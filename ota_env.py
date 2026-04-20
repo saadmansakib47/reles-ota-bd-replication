@@ -105,9 +105,16 @@ class OTAEnv(gym.Env):
         return tx_cost
 
     def step(self, action):
-        # Safety timeout (prevent infinite hang)
-        if self.current_step > self.n_blocks + 5:
-            return self._get_obs(), -100.0, True, False, {"early_termination": True}
+        # === Real Time Safety Timeout (30 seconds per episode) ===
+        if self.episode_start_time is not None:
+            elapsed_time = time.time() - self.episode_start_time
+            if elapsed_time > 30.0:   # 30 seconds max per episode
+                print(f" Episode timeout after {elapsed_time:.1f} seconds")
+                return self._get_obs(), -200.0, True, False, {"early_termination": "timeout"}
+        
+        # === Step-based safety (backup) ===
+        if self.current_step > self.n_blocks + 10:
+            return self._get_obs(), -100.0, True, False, {"early_termination": "step_limit"}
         
         block_idx, operation = action
 
