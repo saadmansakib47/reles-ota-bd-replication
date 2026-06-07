@@ -23,12 +23,12 @@ share/python-wheels/
 MANIFEST
 
 # Virtual Environment
-.venv
+.venv/
 venv/
 ENV/
 env/
 .env
-
+.conda/
 # IDE
 .vscode/
 .idea/

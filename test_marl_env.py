@@ -17,7 +17,14 @@ Run with:
 
 import numpy as np
 import time
+import sys
 from collections import defaultdict
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 from marl_ota_env import MultiAgentOTAEnv
 

@@ -1,16 +1,14 @@
 {
   "method": "random_marl",
-  "n_agents": 4,
+  "n_agents": 2,
   "n_episodes": 2,
   "bd_mode": false,
-  "mean_fleet_payload": 38340.8118715534,
-  "std_fleet_payload": 8981.497776692166,
-  "mean_fleet_memory": 76585.10177430231,
+  "mean_fleet_payload": 24159.111063895252,
+  "std_fleet_payload": 3920.9601038925775,
+  "mean_fleet_memory": 48771.36748490474,
   "mean_episode_steps": 17.0,
   "per_agent_mean_payload": {
-    "ecu_0": 8728.238540217702,
-    "ecu_1": 9266.571191208348,
-    "ecu_2": 7496.159757892442,
-    "ecu_3": 12849.842382234907
+    "ecu_0": 11541.778505855118,
+    "ecu_1": 12617.33255804013
   }
 }

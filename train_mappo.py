@@ -28,10 +28,22 @@ References
 """
 
 import argparse
+import json
+# pyrefly: ignore [missing-import]
 import numpy as np
 import time
+import sys
+# pyrefly: ignore [missing-import]
+import torch
 from pathlib import Path
 from collections import defaultdict
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 
 # ── Env imports ──
 from marl_ota_env import MultiAgentOTAEnv
@@ -128,9 +140,14 @@ def train_ippo(
       2. Wrap into a Gymnasium-compatible VecEnv for SB3
     """
     try:
+        # pyrefly: ignore [import, missing-import]
         import supersuit as ss
+        # pyrefly: ignore [import, missing-import]
         from stable_baselines3 import PPO
+        # pyrefly: ignore [import, missing-import]
         from stable_baselines3.common.vec_env import VecMonitor
+        # pyrefly: ignore [import, missing-import]
+        from fp3o_policy import FP3OPolicy, ValueNormalizationCallback, make_fp3o_policy_kwargs
     except ImportError as e:
         print(f"  ❌  Missing dependency: {e}")
         print("  Install with:  pip install supersuit stable-baselines3")
@@ -151,16 +168,47 @@ def train_ippo(
 
     raw_env = make_env()
 
-    # SuperSuit: flatten dict obs → flat Box for SB3
-    # PettingZoo Parallel → VecEnv conversion
-    env = ss.pettingzoo_env_to_vec_env_v1(raw_env)
+    # SuperSuit: PettingZoo Parallel → SB3-compatible VecEnv
+    # MarkovVectorEnv handles variable-length episodes via black_death masking.
+    
+    # pyrefly: ignore [missing-import]
+    from supersuit.vector.markov_vector_wrapper import MarkovVectorEnv
+    env = MarkovVectorEnv(raw_env, black_death=True)
     env = ss.concat_vec_envs_v1(env, num_vec_envs=1, num_cpus=1, base_class="stable_baselines3")
+
+    # ── Patch missing VecEnv interface methods onto ConcatVecEnv ──────────────
+    # SB3's VecEnvWrapper.__init__ calls get_attr("render_mode") on the inner
+    # env; ConcatVecEnv does not implement get_attr / set_attr / env_method,
+    # which causes AttributeError inside VecMonitor.
+    # Setting render_mode explicitly silences the SB3 UserWarning.
+    env.render_mode = None
+    if not hasattr(env, "get_attr"):
+        def _get_attr(attr_name, indices=None):
+            val  = getattr(env, attr_name, None)
+            idxs = list(range(env.num_envs)) if indices is None else (
+                [indices] if isinstance(indices, int) else list(indices)
+            )
+            return [val for _ in idxs]
+        def _set_attr(attr_name, value, indices=None): pass
+        def _env_method(method_name, *method_args, indices=None, **method_kwargs): return []
+        env.get_attr   = _get_attr
+        env.set_attr   = _set_attr
+        env.env_method = _env_method
+
+    # Dummy seed stub required by older SB3 internals.
+    env.seed = lambda seed=None: None
     env = VecMonitor(env)
 
     # ── PPO model ──
+    policy_kwargs = make_fp3o_policy_kwargs(
+        n_blocks=n_blocks,
+        ecu_type="generic"
+    )
+
     model = PPO(
-        policy          = "MultiInputPolicy",
+        policy          = FP3OPolicy,
         env             = env,
+        policy_kwargs   = policy_kwargs,
         verbose         = 1,
         tensorboard_log = f"{save_dir}/logs/ippo_{'bd' if bd_mode else 'generic'}",
         learning_rate   = 3e-4,
@@ -172,12 +220,15 @@ def train_ippo(
         ent_coef        = 0.01,
         vf_coef         = 0.5,
         max_grad_norm   = 0.5,
-        seed            = 42,
     )
+    # Seed RNGs without triggering env.seed() propagation (SB3 >=2.x)
+    np.random.seed(42)
+    torch.manual_seed(42)
 
     print("\n  Starting IPPO training...")
     t0 = time.time()
-    model.learn(total_timesteps=total_timesteps, progress_bar=True)
+    callback = ValueNormalizationCallback()
+    model.learn(total_timesteps=total_timesteps, progress_bar=True, callback=callback)
     elapsed = time.time() - t0
 
     tag = "bd" if bd_mode else "generic"
@@ -214,7 +265,6 @@ def main():
             n_episodes = args.episodes,
             bd_mode    = args.bd_mode,
         )
-        import json
         out_path = Path("results/marl_random_baseline.json")
         out_path.parent.mkdir(exist_ok=True)
         with open(out_path, "w") as f:

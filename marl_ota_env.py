@@ -24,7 +24,7 @@ References
 import numpy as np
 from gymnasium import spaces
 from pettingzoo import ParallelEnv
-from pettingzoo.utils import parallel_to_aec, wrappers
+from pettingzoo.utils import parallel_to_aec
 
 import hashlib
 import time
@@ -58,6 +58,10 @@ class MultiAgentOTAEnv(ParallelEnv):
     stochastic_latency : sample latency from Truncated Gaussian each step
                          (True for Phase 2 MARL; False for Phase 1 compat)
     max_steps  : hard episode limit per agent (safety cap)
+    ecu_types  : optional dict mapping agent_id → ECU type string
+                 (e.g. {"ecu_0": "engine", "ecu_1": "braking"})
+                 Used by FP3O specialized heads to select the correct
+                 action head for each heterogeneous ECU.
     """
 
     metadata = {
@@ -78,15 +82,29 @@ class MultiAgentOTAEnv(ParallelEnv):
         bd_params_path: str = "bd_params.json",
         stochastic_latency: bool = True,
         max_steps: int = None,
+        render_mode: Optional[str] = None,
+        ecu_types: Optional[Dict[str, str]] = None,
     ):
         super().__init__()
 
+        self.render_mode        = render_mode
         self.n_agents_total     = n_agents
         self.n_blocks           = n_blocks
         self.block_size         = block_size
         self.bd_mode            = bd_mode
         self.stochastic_latency = stochastic_latency
         self.max_steps          = max_steps if max_steps is not None else n_blocks + 10
+
+        # ECU type labels for FP3O heterogeneous action heads.
+        # Valid types: "engine", "braking", "infotainment", "generic"
+        _default_types = ["engine", "braking", "infotainment", "generic"]
+        self.ecu_types: Dict[str, str] = {
+            f"ecu_{i}": (
+                ecu_types.get(f"ecu_{i}", _default_types[i % len(_default_types)])
+                if ecu_types else _default_types[i % len(_default_types)]
+            )
+            for i in range(n_agents)
+        }
 
         # Load network parameters
         # load_bd_params() always merges with safe defaults — safe to call regardless of bd_mode
